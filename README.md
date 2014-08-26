@@ -13,9 +13,9 @@ This benchmark runs below.
 
 1. Creates chef zero server with file store which is set memory or local file system.
 2. Register fake nodes which is made by [fauxhai](https://github.com/customink/fauxhai).
-3. Pick up one node.
-4. Search node with simple query.
-5. Search node with wildcard query.
+3. Measure: Pick up one node.
+4. Measure: Search node with simple query.
+5. Measure: Search node with wildcard query.
 
 
 ## Result example
