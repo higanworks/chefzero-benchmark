@@ -24,6 +24,7 @@ def create_fake_node(ridley, count)
   count.times do |t|
     obj = ridley.node.new
     obj.name = [Faker::Internet.domain_word + t.to_s , Faker::Internet.domain_name].join('.')
+    @nodes << obj.name
     obj.chef_environment = get_env_sample
     obj.automatic = Fauxhai.mock(platform: 'ubuntu', version: '12.04').data
     ridley.node.create(obj)
@@ -47,7 +48,7 @@ def version
   puts '============================'
 end
 
-desc 'run benchmack both mem_store and disk_store.'
+desc 'run benchmark both mem_store and disk_store.'
 task :default do
   Rake::Task['bench:mem'].invoke
   Rake::Task['bench:disk'].invoke
@@ -66,6 +67,7 @@ namespace :bench do
     TIMES.each do |time|
       puts "Preparing fake node objects upto #{time}..."
       ## Warmup
+      @nodes = []
       puts Benchmark::CAPTION
       puts Benchmark.measure {
         create_fake_node(ridley, time)
@@ -73,20 +75,28 @@ namespace :bench do
       puts "Done!"
       puts "============================"
 
+      puts "Start benchmark for pick up one node 5 times of #{time} nodes (on memory)"
+      5.times do
+        puts Benchmark.measure {
+          arr =  ridley.node.find(@nodes.sample)
+          puts Benchmark::CAPTION
+        }
+      end
+
       puts "Start benchmark for search 5 times by simple match query of #{time} nodes (on memory)"
       5.times do
-        puts Benchmark::CAPTION
         puts Benchmark.measure {
           arr =  ridley.search(:node, "chef_environment:#{get_env_sample}")
-          puts "                   Matched #{arr.size} nodes of #{time} objects"
+          puts "--------Matched #{arr.size} nodes of #{time} objects"
+          puts Benchmark::CAPTION
         }
       end
       puts "Start benchmark for search 5 times with wildcard match query of #{time} nodes (on memory)"
       5.times do
-        puts Benchmark::CAPTION
         puts Benchmark.measure {
           arr =  ridley.search(:node, "name:*#{Faker::Internet.domain_suffix}")
-          puts "                   Matched #{arr.size} nodes of #{time} objects"
+          puts "--------Matched #{arr.size} nodes of #{time} objects"
+          puts Benchmark::CAPTION
         }
       end
       puts "Done! Data will be cleared."
@@ -96,11 +106,13 @@ namespace :bench do
     server.stop
   end
 
-  desc 'disk benchmack'
+  desc 'disk_store benchmack'
   task :disk do
     require 'chef/chef_fs/chef_fs_data_store'
     require 'chef/chef_fs/config'
     require 'chef_zero/data_store/raw_file_store'
+
+    version
 
     Dir.mktmpdir do |tmpdir|
       puts "Temporary data_store was created to #{tmpdir}."
@@ -121,6 +133,7 @@ namespace :bench do
       TIMES.each do |time|
         puts "Preparing fake node objects upto #{time}..."
         ## Warmup
+        @nodes = []
         puts Benchmark::CAPTION
         puts Benchmark.measure {
           create_fake_node(ridley, time)
@@ -128,20 +141,28 @@ namespace :bench do
         puts "Done!"
         puts "============================"
 
+        puts "Start benchmark for pick up one node 5 times of #{time} nodes (on filesystem)"
+        5.times do
+          puts Benchmark.measure {
+            arr =  ridley.node.find(@nodes.sample)
+            puts Benchmark::CAPTION
+          }
+        end
+
         puts "Start benchmark for search 5 times by simple match query of #{time} nodes (on filesystem)"
         5.times do
-          puts Benchmark::CAPTION
           puts Benchmark.measure {
             arr =  ridley.search(:node, "chef_environment:#{get_env_sample}")
-            puts "                   Matched #{arr.size} nodes of #{time} objects"
+            puts "--------Matched #{arr.size} nodes of #{time} objects"
+            puts Benchmark::CAPTION
           }
         end
         puts "Start benchmark for search 5 times with wildcard match query of #{time} nodes (on filesystem)"
         5.times do
-          puts Benchmark::CAPTION
           puts Benchmark.measure {
             arr =  ridley.search(:node, "name:*#{Faker::Internet.domain_suffix}")
-            puts "                   Matched #{arr.size} nodes of #{time} objects"
+            puts "--------Matched #{arr.size} nodes of #{time} objects"
+            puts Benchmark::CAPTION
           }
         end
 
